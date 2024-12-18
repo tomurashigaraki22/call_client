@@ -95,11 +95,16 @@ function UserCall() {
     };
 
     pc.ontrack = (event) => {
-      console.log("Received remote stream:", event.streams);
-        console.log("Awesome")
-        remoteVideoRef.current.srcObject = event.streams[0];
-        console.log("E: ", event.streams[0].getTracks())
+      console.log("Remote stream received:", event.streams[0]);
+      if (event.streams && event.streams[0]) {
+        console.log("Stream Tracks:", event.streams[0].getTracks());
+        if (remoteVideoRef.current) {
+          console.log("ALTL:")
+          remoteVideoRef.current.srcObject = event.streams[0];
+        }
+      }
     };
+    
 
     return pc;
   };
