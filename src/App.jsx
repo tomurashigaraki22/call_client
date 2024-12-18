@@ -98,6 +98,7 @@ function UserCall() {
       console.log("Received remote stream:", event.streams);
         console.log("Awesome")
         remoteVideoRef.current.srcObject = event.streams[0];
+        console.log("E: ", event.streams[0].getTracks())
     };
 
     return pc;
