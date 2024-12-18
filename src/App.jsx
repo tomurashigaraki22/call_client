@@ -6,7 +6,7 @@ import "./App.css";
 function UserCall() {
   const [isMuted, setIsMuted] = useState(false);
   const [callStatus, setCallStatus] = useState("Idle");
-  const [params, setParams] = useState(null);
+  const [params, setParams] = useState({ driverId: "", userId: "" });
   const [newSocket, setNewSocket] = useState(null);
   const [isIncomingCall, setIsIncomingCall] = useState(false);
 
@@ -21,11 +21,10 @@ function UserCall() {
   useEffect(() => {
     const initializeParams = () => {
       const urlParams = new URLSearchParams(window.location.search);
-      const paramsObj = {
+      setParams({
         driverId: urlParams.get("driverId") || "",
         userId: urlParams.get("userId") || "",
-      };
-      setParams(paramsObj);
+      });
     };
 
     initializeParams();
@@ -47,27 +46,38 @@ function UserCall() {
       console.log("Received offer:", data);
       setCallStatus("Incoming Call...");
       setIsIncomingCall(true);
-      peerConnections.current[data.from] = createPeerConnection(data.from);
-      await peerConnections.current[data.from].setRemoteDescription(
-        new RTCSessionDescription(data.offer)
-      );
+      const pc = createPeerConnection(data.from);
+      peerConnections.current[data.from] = pc;
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+      } catch (error) {
+        console.error("Error setting remote description:", error);
+      }
     });
 
     socket.on("answer", async (data) => {
       console.log("Received answer:", data);
       if (peerConnections.current[data.from]) {
-        await peerConnections.current[data.from].setRemoteDescription(
-          new RTCSessionDescription(data.answer)
-        );
+        try {
+          await peerConnections.current[data.from].setRemoteDescription(
+            new RTCSessionDescription(data.answer)
+          );
+        } catch (error) {
+          console.error("Error setting remote description:", error);
+        }
       }
     });
 
     socket.on("ice-candidate", async (data) => {
       console.log("Received ICE candidate:", data);
-      if (peerConnections.current[data.to]) {
-        await peerConnections.current[data.to].addIceCandidate(
-          new RTCIceCandidate(data.candidate)
-        );
+      if (peerConnections.current[data.from]) {
+        try {
+          await peerConnections.current[data.from].addIceCandidate(
+            new RTCIceCandidate(data.candidate)
+          );
+        } catch (error) {
+          console.error("Error adding ICE candidate:", error);
+        }
       }
     });
 
@@ -82,16 +92,20 @@ function UserCall() {
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         newSocket.emit("ice-candidate", {
-          to: params.driverId,
+          to: userId,
+          from: params.userId,
           candidate: event.candidate,
         });
       }
     };
 
     pc.ontrack = (event) => {
-      console.log("Remote audio received:", event.streams[0]);
+      console.log("Remote track received:", event.streams[0]);
       if (event.streams && event.streams[0]) {
-        audioRef.current.srcObject = event.streams[0];
+        if (audioRef.current) {
+          audioRef.current.srcObject = event.streams[0];
+          audioRef.current.play().catch(error => console.error("Error playing audio:", error));
+        }
       }
     };
 
@@ -104,14 +118,13 @@ function UserCall() {
       const pc = createPeerConnection(params.driverId);
       peerConnections.current[params.driverId] = pc;
 
-      // Request audio only
       localStream.current = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: false,
       });
 
       localStream.current.getTracks().forEach((track) => {
-        pc.addTrack(track, localStream.current);
+        if (localStream.current) pc.addTrack(track, localStream.current);
       });
 
       const offer = await pc.createOffer();
@@ -133,20 +146,23 @@ function UserCall() {
       setCallStatus("Call Accepted");
       const pc = peerConnections.current[params.driverId];
 
-      // Request audio only
       localStream.current = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: false,
       });
 
       localStream.current.getTracks().forEach((track) => {
-        pc.addTrack(track, localStream.current);
+        if (localStream.current) pc.addTrack(track, localStream.current);
       });
 
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
-      newSocket.emit("answer", { to: params.driverId, answer });
+      newSocket.emit("answer", { 
+        to: params.driverId, 
+        from: params.userId,
+        answer 
+      });
       setIsIncomingCall(false);
     } catch (error) {
       console.error("Error accepting call:", error);
@@ -159,6 +175,9 @@ function UserCall() {
     peerConnections.current = {};
     if (localStream.current) {
       localStream.current.getTracks().forEach((track) => track.stop());
+    }
+    if (audioRef.current) {
+      audioRef.current.srcObject = null;
     }
     setCallStatus("Call Ended");
   };
@@ -178,8 +197,7 @@ function UserCall() {
         <div className="call-status">{callStatus}</div>
       </div>
 
-      {/* Audio Element */}
-      <audio ref={audioRef} autoPlay />
+      <audio ref={audioRef} autoPlay playsInline />
 
       <div className="call-controls">
         <button onClick={toggleMute} className="control-button">
@@ -209,3 +227,4 @@ function UserCall() {
 }
 
 export default UserCall;
+
