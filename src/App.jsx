@@ -1,11 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import io from "socket.io-client";
-import {
-  FaMicrophone,
-  FaMicrophoneSlash,
-  FaPhoneAlt,
-  FaPhone,
-} from "react-icons/fa";
+import { FaMicrophone, FaMicrophoneSlash, FaPhoneAlt, FaPhone } from "react-icons/fa";
 import "./App.css";
 
 function UserCall() {
@@ -17,8 +12,7 @@ function UserCall() {
 
   const peerConnections = useRef({});
   const localStream = useRef(null);
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
+  const audioRef = useRef(null);
 
   const servers = {
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -95,16 +89,11 @@ function UserCall() {
     };
 
     pc.ontrack = (event) => {
-      console.log("Remote stream received:", event.streams[0]);
+      console.log("Remote audio received:", event.streams[0]);
       if (event.streams && event.streams[0]) {
-        console.log("Stream Tracks:", event.streams[0].getTracks());
-        if (remoteVideoRef.current) {
-          console.log("ALTL:")
-          remoteVideoRef.current.srcObject = event.streams[0];
-        }
+        audioRef.current.srcObject = event.streams[0];
       }
     };
-    
 
     return pc;
   };
@@ -115,10 +104,10 @@ function UserCall() {
       const pc = createPeerConnection(params.driverId);
       peerConnections.current[params.driverId] = pc;
 
-      // Request audio and video
+      // Request audio only
       localStream.current = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: true,
+        video: false,
       });
 
       localStream.current.getTracks().forEach((track) => {
@@ -144,10 +133,10 @@ function UserCall() {
       setCallStatus("Call Accepted");
       const pc = peerConnections.current[params.driverId];
 
-      // Request audio and video
+      // Request audio only
       localStream.current = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: true,
+        video: false,
       });
 
       localStream.current.getTracks().forEach((track) => {
@@ -189,15 +178,8 @@ function UserCall() {
         <div className="call-status">{callStatus}</div>
       </div>
 
-      <div className="video-container">
-
-        <video
-          ref={remoteVideoRef}
-          autoPlay
-          playsInline
-          className="remote-video"
-        />
-      </div>
+      {/* Audio Element */}
+      <audio ref={audioRef} autoPlay />
 
       <div className="call-controls">
         <button onClick={toggleMute} className="control-button">
