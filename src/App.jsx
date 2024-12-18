@@ -8,7 +8,7 @@ import {
 } from "react-icons/fa";
 import "./App.css";
 
-function DriverCall() {
+function UserCall() {
   const [isMuted, setIsMuted] = useState(false);
   const [callStatus, setCallStatus] = useState("Idle");
   const [params, setParams] = useState(null);
@@ -46,7 +46,7 @@ function DriverCall() {
 
     socket.on("connect", () => {
       console.log("Connected to socket.io successfully");
-      socket.emit("register_user", { email: params.driverId });
+      socket.emit("register_user", { email: params.userId });
     });
 
     socket.on("offer", async (data) => {
@@ -88,7 +88,7 @@ function DriverCall() {
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         newSocket.emit("ice-candidate", {
-          to: params.userId,
+          to: params.driverId,
           candidate: event.candidate,
         });
       }
@@ -107,8 +107,8 @@ function DriverCall() {
   const startCall = async () => {
     try {
       setCallStatus("Starting Call...");
-      const pc = createPeerConnection(params.userId);
-      peerConnections.current[params.userId] = pc;
+      const pc = createPeerConnection(params.driverId);
+      peerConnections.current[params.driverId] = pc;
 
       // Request audio and video
       localStream.current = await navigator.mediaDevices.getUserMedia({
@@ -125,8 +125,8 @@ function DriverCall() {
       await pc.setLocalDescription(offer);
 
       newSocket.emit("offer", {
-        to: params.userId,
-        from: params.driverId,
+        to: params.driverId,
+        from: params.userId,
         offer,
       });
     } catch (error) {
@@ -138,7 +138,7 @@ function DriverCall() {
   const acceptCall = async () => {
     try {
       setCallStatus("Call Accepted");
-      const pc = peerConnections.current[params.userId];
+      const pc = peerConnections.current[params.driverId];
 
       // Request audio and video
       localStream.current = await navigator.mediaDevices.getUserMedia({
@@ -154,7 +154,7 @@ function DriverCall() {
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
-      newSocket.emit("answer", { to: params.userId, answer });
+      newSocket.emit("answer", { to: params.driverId, answer });
       setIsIncomingCall(false);
     } catch (error) {
       console.error("Error accepting call:", error);
@@ -182,7 +182,7 @@ function DriverCall() {
   return (
     <div className="call-screen">
       <div className="caller-info">
-        <div className="caller-name">Driver</div>
+        <div className="caller-name">User</div>
         <div className="call-status">{callStatus}</div>
       </div>
 
@@ -229,4 +229,4 @@ function DriverCall() {
   );
 }
 
-export default DriverCall;
+export default UserCall;
