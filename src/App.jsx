@@ -164,6 +164,16 @@ function UserCall() {
         answer 
       });
       setIsIncomingCall(false);
+
+      // Attempt to play audio when call is accepted
+      if (audioRef.current && audioRef.current.srcObject) {
+        try {
+          await audioRef.current.play();
+          console.log("Audio playback started successfully");
+        } catch (error) {
+          console.error("Error playing audio:", error);
+        }
+      }
     } catch (error) {
       console.error("Error accepting call:", error);
       alert("Failed to accept call.");
