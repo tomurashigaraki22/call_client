@@ -114,7 +114,6 @@ function UserCall() {
         audio: true,
         video: true,
       });
-      localVideoRef.current.srcObject = localStream.current;
 
       localStream.current.getTracks().forEach((track) => {
         pc.addTrack(track, localStream.current);
@@ -144,7 +143,6 @@ function UserCall() {
         audio: true,
         video: true,
       });
-      localVideoRef.current.srcObject = localStream.current;
 
       localStream.current.getTracks().forEach((track) => {
         pc.addTrack(track, localStream.current);
@@ -186,13 +184,7 @@ function UserCall() {
       </div>
 
       <div className="video-container">
-        <video
-          ref={localVideoRef}
-          autoPlay
-          muted
-          playsInline
-          className="local-video"
-        />
+
         <video
           ref={remoteVideoRef}
           autoPlay
