@@ -128,11 +128,10 @@ function UserCall() {
 
       localStream.current = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: false,
       });
 
       localStream.current.getTracks().forEach((track) => {
-        if (localStream.current) pc.addTrack(track, localStream.current);
+        pc.addTrack(track, localStream.current);
       });
 
       const offer = await pc.createOffer();
@@ -160,7 +159,7 @@ function UserCall() {
       });
 
       localStream.current.getTracks().forEach((track) => {
-        if (localStream.current) pc.addTrack(track, localStream.current);
+        pc.addTrack(track, localStream.current);
       });
 
       const answer = await pc.createAnswer();
