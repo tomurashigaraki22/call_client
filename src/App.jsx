@@ -136,8 +136,8 @@ function DriverCall() {
       await pc.setLocalDescription(offer);
 
       newSocket.emit("offer", {
-        to: params.driverId,
-        from: params.userId,
+        to: params.userId,
+        from: params.driverId,
         offer,
       });
     } catch (error) {
