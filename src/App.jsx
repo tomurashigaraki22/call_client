@@ -105,6 +105,10 @@ function DriverCall() {
       console.log("Track settings:", event.track.getSettings());
       if (remoteAudioRef.current && event.streams && event.streams[0]) {
         remoteAudioRef.current.srcObject = event.streams[0];
+        if (window.confirm("Do you want to play the audio?")) {
+          remoteAudioRef.current.play().catch(error => console.error("Error playing audio:", error));
+        }
+        
       }
     };
 
