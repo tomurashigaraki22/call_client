@@ -256,7 +256,10 @@ function UserCall() {
           justifyContent: "center",
           alignItems: "center",
           marginBottom: "16px",
-          gap: "32px", // Equal spacing between buttons
+          gap: "32px", // Equal spacing between buttons,
+          position: 'absolute',
+          bottom: 20,
+          width: '100%'
         }}
       >
         {/* Mute Button */}
