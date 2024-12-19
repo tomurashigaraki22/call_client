@@ -171,14 +171,6 @@ function DriverCall() {
       setIsIncomingCall(false);
 
       // Start playing the audio
-      if (remoteAudioRef.current && remoteAudioRef.current.srcObject) {
-        try {
-          await remoteAudioRef.current.play();
-          console.log("Audio playback started successfully");
-        } catch (error) {
-          console.error("Error playing audio:", error);
-        }
-      }
     } catch (error) {
       console.error("Error accepting call:", error);
       alert("Failed to accept call.");
