@@ -220,135 +220,40 @@ function DriverCall() {
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      height: '100vh',
-      backgroundColor: '#075E54',
-      color: 'white',
-      padding: '20px',
-      boxSizing: 'border-box'
-    }}>
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        marginTop: '40px'
-      }}>
-        <div style={{
-          fontSize: '24px',
-          fontWeight: 'bold',
-          marginBottom: '10px'
-        }}>Driver</div>
-        <div style={{
-          fontSize: '18px',
-          opacity: '0.8'
-        }}>{callStatus}</div>
+    <div className="call-screen">
+      <div className="caller-info">
+        <div className="caller-name">Driver</div>
+        <div className="call-status">{callStatus}</div>
       </div>
 
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center'
-      }}>
-        <audio ref={remoteAudioRef} playsInline style={{ display: 'none' }} />
-        <button 
-          onClick={playAudio} 
-          style={{
-            backgroundColor: 'transparent',
-            border: '1px solid white',
-            color: 'white',
-            padding: '10px 20px',
-            borderRadius: '20px',
-            fontSize: '16px',
-            cursor: 'pointer',
-            marginBottom: '20px'
-          }}
-        >
+      <div>
+        <audio ref={remoteAudioRef} playsInline />
+        <button onClick={playAudio} className="play-audio-button">
           Play Audio
         </button>
       </div>
 
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-around',
-        width: '100%',
-        maxWidth: '300px',
-        marginBottom: '40px'
-      }}>
-        <button 
-          onClick={toggleMute} 
-          style={{
-            backgroundColor: 'transparent',
-            border: 'none',
-            color: 'white',
-            fontSize: '24px',
-            cursor: 'pointer'
-          }}
-        >
-          {isMuted ? <FaMicrophoneSlash /> : <FaMicrophone />}
+      <div className="call-controls">
+        <button onClick={toggleMute} className="control-button">
+          {isMuted ? (
+            <FaMicrophoneSlash className="control-icon red" />
+          ) : (
+            <FaMicrophone className="control-icon white" />
+          )}
         </button>
 
         {isIncomingCall ? (
-          <button 
-            onClick={acceptCall} 
-            style={{
-              backgroundColor: '#25D366',
-              border: 'none',
-              borderRadius: '50%',
-              width: '60px',
-              height: '60px',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              fontSize: '24px',
-              color: 'white',
-              cursor: 'pointer'
-            }}
-          >
-            <FaPhone />
+          <button onClick={acceptCall} className="control-button green-bg">
+            <FaPhone className="control-icon white" />
           </button>
         ) : (
-          <button 
-            onClick={startCall} 
-            style={{
-              backgroundColor: '#25D366',
-              border: 'none',
-              borderRadius: '50%',
-              width: '60px',
-              height: '60px',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              fontSize: '24px',
-              color: 'white',
-              cursor: 'pointer'
-            }}
-          >
-            <FaPhoneAlt />
+          <button onClick={startCall} className="control-button green-bg">
+            <FaPhoneAlt className="control-icon white" />
           </button>
         )}
 
-        <button 
-          onClick={endCall} 
-          style={{
-            backgroundColor: '#FF3B30',
-            border: 'none',
-            borderRadius: '50%',
-            width: '60px',
-            height: '60px',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            fontSize: '24px',
-            color: 'white',
-            cursor: 'pointer',
-            transform: 'rotate(135deg)'
-          }}
-        >
-          <FaPhoneAlt />
+        <button onClick={endCall} className="control-button red-bg">
+          <FaPhoneAlt className="control-icon white rotate-icon" />
         </button>
       </div>
     </div>
