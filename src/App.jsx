@@ -13,6 +13,7 @@ function DriverCall() {
   const peerConnections = useRef({});
   const localStream = useRef(null);
   const remoteAudioRef = useRef(null);
+  const mainArray = useRef(null)
 
   const servers = {
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
