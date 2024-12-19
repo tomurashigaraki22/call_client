@@ -150,7 +150,9 @@ function DriverCall() {
   const acceptCall = async () => {
     try {
       setCallStatus("Call Accepted");
-      const pc = peerConnections.current[params.userId];
+      const pc = createPeerConnection(params.userId);
+
+      peerConnections.current[params.userId] = pc
 
       localStream.current = await navigator.mediaDevices.getUserMedia({
         audio: true,
