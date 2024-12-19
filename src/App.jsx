@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import io from "socket.io-client";
 import { FaMicrophone, FaMicrophoneSlash, FaPhoneAlt, FaPhone } from "react-icons/fa";
-import "./App.css";
+import './App.css'
 
 function UserCall() {
   const [isMuted, setIsMuted] = useState(false);
@@ -62,10 +62,18 @@ function UserCall() {
           await peerConnections.current[data.from].setRemoteDescription(
             new RTCSessionDescription(data.answer)
           );
+          setCallStatus("Call Accepted");
+          setIsIncomingCall(false);
         } catch (error) {
           console.error("Error setting remote description:", error);
         }
       }
+    });
+
+    socket.on("endCall", () => {
+      console.log("Call ended");
+      setCallStatus("Call Ended");
+      endCall();
     });
 
     socket.on("ice-candidate", async (data) => {
@@ -190,6 +198,7 @@ function UserCall() {
       audioRef.current.srcObject = null;
     }
     setCallStatus("Call Ended");
+    newSocket.emit("endCall", { to: params.driverId, from: params.userId });
   };
 
   const toggleMute = () => {
@@ -201,40 +210,139 @@ function UserCall() {
   };
 
   return (
-    <div className="call-screen">
-      <div className="caller-info">
-        <div className="caller-name">User</div>
-        <div className="call-status">{callStatus}</div>
+    <div
+      style={{
+        width: "100vw",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        alignItems: "center",
+        backgroundColor: "#000", // Black background
+        color: "#fff", // White text
+      }}
+    >
+      {/* Caller Info */}
+      <div
+        style={{
+          textAlign: "center",
+          marginTop: 50,
+        }}
+      >
+        <div
+          style={{
+            fontSize: "2rem",
+            fontWeight: "600",
+            marginBottom: "8px", // Add spacing between title and status
+          }}
+        >
+          User
+        </div>
+        <div
+          style={{
+            fontSize: "0.875rem",
+            opacity: 0.8, // Slight transparency for call status
+          }}
+        >
+          {callStatus}
+        </div>
       </div>
-
-      <audio ref={audioRef} autoPlay playsInline />
-
-      <div className="call-controls">
-        <button onClick={toggleMute} className="control-button">
+  
+      <audio ref={audioRef} autoPlay playsInline style={{ display: "none" }} />
+  
+      {/* Call Controls */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          marginBottom: "16px",
+          gap: "32px", // Equal spacing between buttons
+        }}
+      >
+        {/* Mute Button */}
+        <button
+          onClick={toggleMute}
+          style={{
+            padding: "15px",
+            borderRadius: "50%",
+            backgroundColor: "transparent",
+            border: "2px solid #fff",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            cursor: "pointer",
+            transition: "transform 0.2s", // Button interaction effect
+          }}
+        >
           {isMuted ? (
-            <FaMicrophoneSlash className="control-icon red" />
+            <FaMicrophoneSlash style={{ color: "#fff", fontSize: "1rem" }} />
           ) : (
-            <FaMicrophone className="control-icon white" />
+            <FaMicrophone style={{ color: "#fff", fontSize: "1rem" }} />
           )}
         </button>
-
+  
+        {/* Accept or Start Call Button */}
         {isIncomingCall ? (
-          <button onClick={acceptCall} className="control-button green-bg">
-            <FaPhone className="control-icon white" />
+          <button
+            onClick={acceptCall}
+            style={{
+              padding: "15px",
+              borderRadius: "50%",
+              backgroundColor: "#f27e05", // Orange for accepting calls
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              cursor: "pointer",
+              transition: "transform 0.2s", // Interaction effect
+            }}
+          >
+            <FaPhone style={{ color: "#fff", fontSize: "1rem" }} />
           </button>
         ) : (
-          <button onClick={startCall} className="control-button green-bg">
-            <FaPhoneAlt className="control-icon white" />
+          <button
+            onClick={startCall}
+            style={{
+              padding: "15px",
+              borderRadius: "50%",
+              backgroundColor: "#34D399", // Green for starting calls
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              cursor: "pointer",
+              transition: "transform 0.2s", // Interaction effect
+            }}
+          >
+            <FaPhoneAlt style={{ color: "#fff", fontSize: "1rem" }} />
           </button>
         )}
-
-        <button onClick={endCall} className="control-button red-bg">
-          <FaPhoneAlt className="control-icon white rotate-icon" />
+  
+        {/* End Call Button */}
+        <button
+          onClick={endCall}
+          style={{
+            padding: "15px",
+            borderRadius: "50%",
+            backgroundColor: "#e11d48", // Red for ending calls
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            cursor: "pointer",
+            transition: "transform 0.2s", // Interaction effect
+          }}
+        >
+          <FaPhoneAlt
+            style={{
+              color: "#fff",
+              fontSize: "1rem",
+              transform: "rotate(180deg)", // Icon flipped for end call
+            }}
+          />
         </button>
       </div>
     </div>
   );
+  
 }
 
 export default UserCall;
-
