@@ -92,7 +92,7 @@ function DriverCall() {
     };
   }, [params]);
 
-  const createPeerConnection = (driverId) => {
+  const createPeerConnection = (userId) => {
     const pc = new RTCPeerConnection(servers);
 
     pc.onicecandidate = (event) => {
