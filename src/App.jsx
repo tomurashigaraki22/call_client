@@ -41,7 +41,7 @@ function DriverCall() {
 
     socket.on("connect", () => {
       console.log("Connected to socket.io successfully");
-      socket.emit("register_user", { driverId: params.driverId });
+      socket.emit("register_user", { email: params.driverId });
     });
 
     socket.on("offer", async (data) => {
