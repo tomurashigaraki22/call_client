@@ -182,6 +182,7 @@ function DriverCall() {
     } catch (error) {
       console.error("Error accepting call:", error);
       alert("Failed to accept call.");
+      alert(`Error: ${error}`)
     }
   };
 
