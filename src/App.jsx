@@ -62,6 +62,12 @@ function DriverCall() {
           await peerConnections.current[data.from].setRemoteDescription(
             new RTCSessionDescription(data.answer)
           );
+          try {
+            await remoteAudioRef.current.play();
+            console.log("Audio playback started successfully");
+          } catch (error) {
+            console.error("Error playing audio:", error);
+          }
         } catch (error) {
           console.error("Error setting remote description:", error);
         }
@@ -86,7 +92,7 @@ function DriverCall() {
     };
   }, [params]);
 
-  const createPeerConnection = (userId) => {
+  const createPeerConnection = (driverId) => {
     const pc = new RTCPeerConnection(servers);
 
     pc.onicecandidate = (event) => {
@@ -101,14 +107,9 @@ function DriverCall() {
 
     pc.ontrack = (event) => {
       console.log("Remote track received:", event.streams[0]);
-      console.log("Track type:", event.track.kind);
-      console.log("Track settings:", event.track.getSettings());
       if (remoteAudioRef.current && event.streams && event.streams[0]) {
         remoteAudioRef.current.srcObject = event.streams[0];
-        if (window.confirm("Do you want to play the audio?")) {
-          remoteAudioRef.current.play().catch(error => console.error("Error playing audio:", error));
-        }
-        
+        remoteAudioRef.current.play().catch(error => console.error("Error playing audio:", error));
       }
     };
 
@@ -213,6 +214,7 @@ function DriverCall() {
       remoteAudioRef.current.play().catch(error => console.error("Error playing audio:", error));
     } else {
       console.log("No audio source available yet");
+      alert("No audio source available")
     }
   };
 
