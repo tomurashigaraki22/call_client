@@ -3,7 +3,7 @@ import io from "socket.io-client";
 import { FaMicrophone, FaMicrophoneSlash, FaPhoneAlt, FaPhone } from "react-icons/fa";
 import './App.css'
 
-function UserCall() {
+function DriverCall() {
   const [isMuted, setIsMuted] = useState(false);
   const [callStatus, setCallStatus] = useState("Idle");
   const [params, setParams] = useState({ driverId: "", userId: "" });
@@ -12,7 +12,7 @@ function UserCall() {
 
   const peerConnections = useRef({});
   const localStream = useRef(null);
-  const audioRef = useRef(null);
+  const remoteAudioRef = useRef(null);
 
   const servers = {
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -62,18 +62,16 @@ function UserCall() {
           await peerConnections.current[data.from].setRemoteDescription(
             new RTCSessionDescription(data.answer)
           );
-          setCallStatus("Call Accepted");
-          setIsIncomingCall(false);
+          try {
+            await remoteAudioRef.current.play();
+            console.log("Audio playback started successfully");
+          } catch (error) {
+            console.error("Error playing audio:", error);
+          }
         } catch (error) {
           console.error("Error setting remote description:", error);
         }
       }
-    });
-
-    socket.on("endCall", () => {
-      console.log("Call ended");
-      setCallStatus("Call Ended");
-      endCall();
     });
 
     socket.on("ice-candidate", async (data) => {
@@ -94,13 +92,13 @@ function UserCall() {
     };
   }, [params]);
 
-  const createPeerConnection = (userId) => {
+  const createPeerConnection = (driverId) => {
     const pc = new RTCPeerConnection(servers);
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         newSocket.emit("ice-candidate", {
-          to: userId,
+          to: driverId,
           from: params.userId,
           candidate: event.candidate,
         });
@@ -109,11 +107,11 @@ function UserCall() {
 
     pc.ontrack = (event) => {
       console.log("Remote track received:", event.streams[0]);
-      if (event.streams && event.streams[0]) {
-        if (audioRef.current) {
-          audioRef.current.srcObject = event.streams[0];
-          audioRef.current.play().catch(error => console.error("Error playing audio:", error));
-        }
+      console.log("Track type:", event.track.kind);
+      console.log("Track settings:", event.track.getSettings());
+      if (remoteAudioRef.current && event.streams && event.streams[0]) {
+        remoteAudioRef.current.srcObject = event.streams[0];
+        remoteAudioRef.current.play().catch(error => console.error("Error playing audio:", error));
       }
     };
 
@@ -136,6 +134,7 @@ function UserCall() {
 
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
+      console.log("Local description set:", pc.localDescription);
 
       newSocket.emit("offer", {
         to: params.driverId,
@@ -151,11 +150,10 @@ function UserCall() {
   const acceptCall = async () => {
     try {
       setCallStatus("Call Accepted");
-      const pc = peerConnections.current[params.driverId];
+      const pc = peerConnections.current[params.userId];
 
       localStream.current = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: false,
       });
 
       localStream.current.getTracks().forEach((track) => {
@@ -166,21 +164,21 @@ function UserCall() {
       await pc.setLocalDescription(answer);
 
       newSocket.emit("answer", { 
-        to: params.driverId, 
-        from: params.userId,
+        to: params.userId, 
+        from: params.driverId,
         answer 
       });
-      
       setIsIncomingCall(false);
 
-      // Attempt to play audio when call is accepted
+      // Start playing the audio
+      if (remoteAudioRef.current && remoteAudioRef.current.srcObject) {
         try {
-          await audioRef.current.play();
+          await remoteAudioRef.current.play();
           console.log("Audio playback started successfully");
         } catch (error) {
           console.error("Error playing audio:", error);
         }
-      
+      }
     } catch (error) {
       console.error("Error accepting call:", error);
       alert("Failed to accept call.");
@@ -193,11 +191,10 @@ function UserCall() {
     if (localStream.current) {
       localStream.current.getTracks().forEach((track) => track.stop());
     }
-    if (audioRef.current) {
-      audioRef.current.srcObject = null;
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = null;
     }
     setCallStatus("Call Ended");
-    newSocket.emit("endCall", { to: params.driverId, from: params.userId });
   };
 
   const toggleMute = () => {
@@ -208,79 +205,35 @@ function UserCall() {
     }
   };
 
+  const playAudio = () => {
+    if (remoteAudioRef.current && remoteAudioRef.current.srcObject) {
+      remoteAudioRef.current.play().catch(error => console.error("Error playing audio:", error));
+    } else {
+      console.log("No audio source available yet");
+    }
+  };
+
   return (
-    <div
-      style={{
-        width: "100vw",
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        alignItems: "center",
-        backgroundColor: "#000", // Black background
-        color: "#fff", // White text
-      }}
-    >
+    <div style={{ flex: 1, textAlign: 'center', backgroundColor: 'black', color: 'white', height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
       {/* Caller Info */}
-      <div
-        style={{
-          textAlign: "center",
-          marginTop: 50,
-        }}
-      >
-        <div
-          style={{
-            fontSize: "2rem",
-            fontWeight: "600",
-            marginBottom: "8px", // Add spacing between title and status
-          }}
-        >
-          User
-        </div>
-        <div
-          style={{
-            fontSize: "0.875rem",
-            opacity: 0.8, // Slight transparency for call status
-          }}
-        >
-          {callStatus}
-        </div>
+      <div style={{ marginBottom: 'auto', textAlign: 'center', marginTop: 20 }}>
+        <div style={{ fontSize: '32px', fontWeight: '600' }}>Driver</div>
+        <div style={{ fontSize: '14px', marginTop: '8px' }}>{callStatus}</div>
       </div>
   
-      <audio ref={audioRef} autoPlay playsInline style={{ display: "none" }} />
+      <audio ref={remoteAudioRef} autoPlay playsInline style={{ display: 'none' }} />
   
       {/* Call Controls */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          marginBottom: "16px",
-          gap: "32px", // Equal spacing between buttons,
-          position: 'absolute',
-          bottom: 20,
-          width: '100%'
-        }}
-      >
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginBottom: '16px', position: 'absolute', bottom: 10, width: '100%' }}>
         {/* Mute Button */}
         <button
           onClick={toggleMute}
-          style={{
-            padding: "15px",
-            borderRadius: "50%",
-            backgroundColor: "transparent",
-            border: "2px solid #fff",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            cursor: "pointer",
-            transition: "transform 0.2s", // Button interaction effect
-          }}
+          style={{ padding: '12px', borderRadius: '50%', border: '2px solid white', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
         >
           {isMuted ? (
-            <FaMicrophoneSlash style={{ color: "#fff", fontSize: "1rem" }} />
+            <FaMicrophoneSlash style={{ color: 'white', fontSize: '24px' }} />
           ) : (
-            <FaMicrophone style={{ color: "#fff", fontSize: "1rem" }} />
+            <FaMicrophone style={{ color: 'white', fontSize: '24px' }} />
           )}
         </button>
   
@@ -288,58 +241,25 @@ function UserCall() {
         {isIncomingCall ? (
           <button
             onClick={acceptCall}
-            style={{
-              padding: "15px",
-              borderRadius: "50%",
-              backgroundColor: "#f27e05", // Orange for accepting calls
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              cursor: "pointer",
-              transition: "transform 0.2s", // Interaction effect
-            }}
+            style={{ padding: '12px', borderRadius: '50%', backgroundColor: '#f27e05', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
           >
-            <FaPhone style={{ color: "#fff", fontSize: "1rem" }} />
+            <FaPhone style={{ color: 'white', fontSize: '24px' }} />
           </button>
         ) : (
           <button
             onClick={startCall}
-            style={{
-              padding: "15px",
-              borderRadius: "50%",
-              backgroundColor: "#34D399", // Green for starting calls
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              cursor: "pointer",
-              transition: "transform 0.2s", // Interaction effect
-            }}
+            style={{ padding: '12px', borderRadius: '50%', backgroundColor: '#4CAF50', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
           >
-            <FaPhoneAlt style={{ color: "#fff", fontSize: "1rem" }} />
+            <FaPhoneAlt style={{ color: 'white', fontSize: '24px' }} />
           </button>
         )}
   
         {/* End Call Button */}
         <button
           onClick={endCall}
-          style={{
-            padding: "15px",
-            borderRadius: "50%",
-            backgroundColor: "#e11d48", // Red for ending calls
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            cursor: "pointer",
-            transition: "transform 0.2s", // Interaction effect
-          }}
+          style={{ padding: '12px', borderRadius: '50%', backgroundColor: '#D32F2F', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
         >
-          <FaPhoneAlt
-            style={{
-              color: "#fff",
-              fontSize: "1rem",
-              transform: "rotate(180deg)", // Icon flipped for end call
-            }}
-          />
+          <FaPhoneAlt style={{ color: 'white', fontSize: '24px', transform: 'rotate(180deg)' }} />
         </button>
       </div>
     </div>
@@ -347,4 +267,4 @@ function UserCall() {
   
 }
 
-export default UserCall;
+export default DriverCall;
