@@ -32,6 +32,12 @@ const CallScreen = () => {
     newPeer.on('call', async (call) => {
       setCallStatus('Ringing');
       setCallDetails(call);
+      call.answer(localAudioRef.current.srcObject);
+      call.on('stream', (stream) => {
+        setRemoteStream(stream);
+        remoteAudioRef.current.srcObject = stream;
+      });
+      setCallStatus('In Call');
       
     });
 
@@ -81,12 +87,7 @@ const CallScreen = () => {
 
   const acceptCall = () => {
     if (callDetails) {
-      callDetails.answer(localAudioRef.current.srcObject);
-      callDetails.on('stream', (stream) => {
-        setRemoteStream(stream);
-        remoteAudioRef.current.srcObject = stream;
-      });
-      setCallStatus('In Call');
+      
     }
   };
 
