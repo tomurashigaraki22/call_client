@@ -32,8 +32,7 @@ const CallScreen = () => {
     newPeer.on('call', async (call) => {
       setCallStatus('Ringing');
       setCallDetails(call);
-      startCall()
-      acceptCall()
+      
     });
 
     return () => {
