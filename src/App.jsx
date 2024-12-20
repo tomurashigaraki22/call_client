@@ -82,7 +82,6 @@ const CallScreen = () => {
     if (callDetails) {
       callDetails.answer(localAudioRef.current.srcObject);
       callDetails.on('stream', (stream) => {
-        console.log("Remote stream received: ", stream)
         setRemoteStream(stream);
         remoteAudioRef.current.srcObject = stream;
       });
@@ -95,11 +94,18 @@ const CallScreen = () => {
       .then((stream) => {
         localAudioRef.current.srcObject = stream;
         const call = peer.call(remotePeerId, stream);
+
+        // Ensure that the remote stream is received as soon as the call starts.
         call.on('stream', (remoteStream) => {
-          console.log("In start call event: ", remoteStream)
+          console.log("I got a stream: ", remoteStream);
           setRemoteStream(remoteStream);
           remoteAudioRef.current.srcObject = remoteStream;
         });
+
+        call.on('error', (err) => {
+          console.error("Call error: ", err);
+        });
+
         setCallStatus('In Call');
       })
       .catch((err) => {
@@ -159,7 +165,7 @@ const CallScreen = () => {
 
       {/* Hidden Audio Streams */}
       <audio ref={localAudioRef} autoPlay muted style={{ display: 'none' }} />
-        <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
+      <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
 
       {/* Start Call Button for Authorized Users */}
       {(localPeerId === driverId.slice(0, 4) || localPeerId === userId.slice(0, 4)) && (
