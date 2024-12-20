@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Peer from 'peerjs';
 import { FiPhoneOff, FiMic, FiMicOff } from 'react-icons/fi'; // Importing icons
+import './main.css'
 
 const CallScreen = () => {
   const [callStatus, setCallStatus] = useState('Connecting...');
@@ -126,19 +127,21 @@ const CallScreen = () => {
   };
 
   return (
-    <div style={{ textAlign: 'center', padding: '20px' }}>
-      <h1>{callStatus}</h1>
+    <div style={{ textAlign: 'center', backgroundColor: 'black' }}>
+      <div style={{ textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', paddingTop: 20 }}>
+        <p style={{ fontSize: 20, color: 'white' }}>{callStatus}</p>
+      </div>
+      
       <audio ref={localAudioRef} autoPlay muted style={{ display: 'none' }} />
       <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
 
       {/* Buttons for End Call and Mute/Unmute */}
-      {call && (
-        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '40px', position: 'absolute', bottom: 20, width: '100%' }}>
           {/* End Call Icon */}
           <button
             onClick={endCall}
             style={{
-              padding: '10px',
+              padding: '15px',
               backgroundColor: 'red',
               border: 'none',
               borderRadius: '50%',
@@ -150,14 +153,14 @@ const CallScreen = () => {
               cursor: 'pointer',
             }}
           >
-            <FiPhoneOff />
+            <FiPhoneOff color='white' size={30} />
           </button>
 
           {/* Mute/Unmute Icon */}
           <button
             onClick={toggleMute}
             style={{
-              padding: '10px',
+              padding: '15px',
               backgroundColor: isMuted ? 'gray' : 'green',
               border: 'none',
               borderRadius: '50%',
@@ -169,10 +172,9 @@ const CallScreen = () => {
               cursor: 'pointer',
             }}
           >
-            {isMuted ? <FiMicOff /> : <FiMic />}
+            {isMuted ? <FiMicOff color='white' size={30}/> : <FiMic color='white' size={30}/>}
           </button>
         </div>
-      )}
     </div>
   );
 };

@@ -1,0 +1,10 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #000; /* Black background */
+    color: white;
+    height: 100vh; /* Ensure body takes full height of the viewport */
+    display: block; /* Default display to avoid global flex issues */
+    width: 100vw;
+  }
+  
