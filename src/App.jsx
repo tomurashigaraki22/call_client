@@ -1,224 +1,165 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaPhone, FaMicrophone, FaPhoneSlash } from 'react-icons/fa';
 import Peer from 'peerjs';
+import { FiPhoneOff, FiMic, FiMicOff } from 'react-icons/fi'; // Importing icons
 
 const CallScreen = () => {
   const [callStatus, setCallStatus] = useState('Connecting...');
-  const [isMuted, setIsMuted] = useState(false);
-  const [timer, setTimer] = useState(0);
-  const [intervalId, setIntervalId] = useState(null);
-  const [callDetails, setCallDetails] = useState(null);
   const [peer, setPeer] = useState(null);
-  const [peerId, setPeerId] = useState(null);
-  const [remoteStream, setRemoteStream] = useState(null);
+  const [peerId, setPeerId] = useState('');
+  const [remotePeerId, setRemotePeerId] = useState(''); // Set this dynamically
+  const [isMuted, setIsMuted] = useState(false);
+  const [call, setCall] = useState(null);
   const localAudioRef = useRef(null);
   const remoteAudioRef = useRef(null);
 
   const urlParams = new URLSearchParams(window.location.search);
-  const userId = urlParams.get('userId');
   const driverId = urlParams.get('driverId');
-  const initiator = urlParams.get('initiator');
-  
-  const localPeerId = driverId?.slice(0, 4);
-  const remotePeerId = userId?.slice(0, 4);
+  const userId = urlParams.get('userId');
+  const isInitiator = urlParams.get('initiator') === 'true';
+
+  const localPeerId = userId?.slice(0, 4);
+  const targetPeerId = driverId?.slice(0, 4);
 
   useEffect(() => {
-    const newPeer = new Peer(localPeerId);
+    const newPeer = new Peer(localPeerId); // Use a predefined Peer ID
     setPeer(newPeer);
 
     newPeer.on('open', (id) => {
       setPeerId(id);
+      console.log('Peer ID:', id);
     });
 
-    // Automatically accept the call
-    newPeer.on('call', async (call) => {
-      setCallStatus('Ringing');
-      setCallDetails(call);
+    newPeer.on('call', (incomingCall) => {
+      setCallStatus('Ringing...');
+      navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+        localAudioRef.current.srcObject = stream;
+        incomingCall.answer(stream);
+        setCall(incomingCall);
 
-      // Automatically answer the call with the local stream
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then((stream) => {
-          localAudioRef.current.srcObject = stream; // Local stream for the caller
-          localAudioRef.current.muted = true; // Mute local audio to avoid feedback
-
-          call.answer(stream); // Automatically answer the call
-
-          call.on('stream', (remoteStream) => {
-            setRemoteStream(remoteStream);
-            remoteAudioRef.current.srcObject = remoteStream; // Set the remote stream
-          });
-
+        incomingCall.on('stream', (remoteStream) => {
+          remoteAudioRef.current.srcObject = remoteStream;
           setCallStatus('In Call');
-        })
-        .catch((err) => {
-          console.error("Error accessing media devices: ", err);
         });
+      });
+    });
+
+    newPeer.on('connection', (conn) => {
+      conn.on('open', () => {
+        console.log('Connected to peer:', conn.peer);
+        if (isInitiator) {
+          startCall(conn.peer);
+        }
+      });
     });
 
     return () => {
-      if (newPeer) {
-        newPeer.destroy();
-      }
+      if (newPeer) newPeer.destroy();
     };
   }, []);
 
-  useEffect(() => {
-    if (initiator === 'true' && peer && remotePeerId) {
-      startCall(remotePeerId);  // Ensure `peer` is initialized before starting the call
-    }
-  }, [initiator, peer, remotePeerId]);  // Add `peer` and `remotePeerId` to dependencies to ensure the call happens when the peer is ready
+  const checkAndConnectToPeer = () => {
+    if (!targetPeerId) return;
 
-  useEffect(() => {
-    if (callStatus === 'In Call') {
-      const id = setInterval(() => {
-        setTimer((prev) => prev + 1);
-      }, 1000);
-      setIntervalId(id);
-    }
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [callStatus]);
+    const conn = peer.connect(targetPeerId);
+    conn.on('open', () => {
+      console.log('Connection established with:', targetPeerId);
+      setCallStatus('Peer Connected');
+      startCall(targetPeerId);
+    });
 
-  const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const sec = seconds % 60;
-    return `${minutes}:${sec < 10 ? '0' : ''}${sec}`;
+    conn.on('error', (err) => {
+      console.error('Connection failed, retrying...', err);
+      setTimeout(checkAndConnectToPeer, 2000);
+    });
   };
 
-  const toggleMute = () => {
-    setIsMuted((prev) => !prev);
-    if (localAudioRef.current && localAudioRef.current.srcObject) {
-      localAudioRef.current.srcObject.getAudioTracks().forEach((track) => {
-        track.enabled = !track.enabled;
-      });
+  useEffect(() => {
+    if (isInitiator && peer) {
+      checkAndConnectToPeer();
     }
+  }, [isInitiator, peer]);
+
+  const startCall = (remotePeerId) => {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      localAudioRef.current.srcObject = stream;
+      const outgoingCall = peer.call(remotePeerId, stream);
+      setCall(outgoingCall);
+
+      outgoingCall.on('stream', (remoteStream) => {
+        remoteAudioRef.current.srcObject = remoteStream;
+        setCallStatus('In Call');
+      });
+
+      setCallStatus('Calling...');
+    });
   };
 
   const endCall = () => {
-    setCallStatus('Ended');
-    if (peer && callDetails) {
-      callDetails.close();
-    }
-    clearInterval(intervalId);
-  };
-
-  const acceptCall = () => {
-    if (callDetails) {
-      callDetails.answer(localAudioRef.current.srcObject);
-      callDetails.on('stream', (stream) => {
-        setRemoteStream(stream);
-        remoteAudioRef.current.srcObject = stream;
-      });
-      setCallStatus('In Call');
+    if (call) {
+      call.close();
+      setCallStatus('Call Ended');
     }
   };
 
-  const startCall = (remotePeerId) => {
-    if (!peer) {
-      console.error('Peer connection is not initialized yet!');
-      return;
+  const toggleMute = () => {
+    if (localAudioRef.current) {
+      const stream = localAudioRef.current.srcObject;
+      const audioTrack = stream.getAudioTracks()[0];
+      audioTrack.enabled = !audioTrack.enabled;
+      setIsMuted(!audioTrack.enabled);
     }
-
-    navigator.mediaDevices.getUserMedia({ audio: true })
-      .then((stream) => {
-        localAudioRef.current.srcObject = stream; // Local stream for the caller
-        localAudioRef.current.muted = true; // Mute local audio to avoid feedback
-
-        const call = peer.call(remotePeerId, stream); // Initiate the call
-
-        // Automatically handle incoming stream for the remote party
-        call.on('stream', (remoteStream) => {
-          console.log("I got a stream: ", remoteStream);
-          setRemoteStream(remoteStream);
-          remoteAudioRef.current.srcObject = remoteStream; // Set the remote stream
-        });
-
-        call.on('error', (err) => {
-          console.error("Call error: ", err);
-        });
-
-        setCallStatus('In Call');
-      })
-      .catch((err) => {
-        alert(`Error accessing media: ${err}`);
-      });
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      justifyContent: 'space-between', 
-      height: '100vh', 
-      backgroundColor: '#075E54', 
-      color: 'white', 
-      padding: '20px', 
-      textAlign: 'center',
-      fontFamily: 'Arial, sans-serif' 
-    }}>
-      {/* Header - Call Status */}
-      <div>
-        <div style={{ fontSize: '28px', fontWeight: '600', marginBottom: '20px' }}>
-          {callStatus}
-        </div>
-        {callStatus === 'In Call' && (
-          <div style={{ fontSize: '22px', fontWeight: '500' }}>
-            {formatTime(timer)}
-          </div>
-        )}
-      </div>
-
-      {/* Centered Audio Stream / Caller */}
-      <div style={{ marginTop: '20px', marginBottom: '20px' }}>
-        <div style={{ fontSize: '40px', fontWeight: '700', color: 'white' }}>
-          {remoteStream ? 'Remote Caller' : 'Waiting for Connection'}
-        </div>
-      </div>
-
-      {/* Call Control Buttons */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '40px', marginBottom: '20px' }}>
-        {callStatus === 'Ringing' && (
-          <button onClick={acceptCall} style={buttonStyles('#10B981')}>
-            <FaPhone size={32} />
-          </button>
-        )}
-        {callStatus === 'In Call' && (
-          <>
-            <button onClick={toggleMute} style={buttonStyles('#F59E0B')}>
-              <FaMicrophone size={32} className={isMuted ? 'opacity-50' : ''} />
-            </button>
-            <button onClick={endCall} style={buttonStyles('#EF4444')}>
-              <FaPhoneSlash size={32} />
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Hidden Audio Streams */}
+    <div style={{ textAlign: 'center', padding: '20px' }}>
+      <h1>{callStatus}</h1>
       <audio ref={localAudioRef} autoPlay muted style={{ display: 'none' }} />
       <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
 
+      {/* Buttons for End Call and Mute/Unmute */}
+      {call && (
+        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '20px' }}>
+          {/* End Call Icon */}
+          <button
+            onClick={endCall}
+            style={{
+              padding: '10px',
+              backgroundColor: 'red',
+              border: 'none',
+              borderRadius: '50%',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              cursor: 'pointer',
+            }}
+          >
+            <FiPhoneOff />
+          </button>
+
+          {/* Mute/Unmute Icon */}
+          <button
+            onClick={toggleMute}
+            style={{
+              padding: '10px',
+              backgroundColor: isMuted ? 'gray' : 'green',
+              border: 'none',
+              borderRadius: '50%',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              cursor: 'pointer',
+            }}
+          >
+            {isMuted ? <FiMicOff /> : <FiMic />}
+          </button>
+        </div>
+      )}
     </div>
   );
 };
-
-// Button Styles
-const buttonStyles = (bgColor) => ({
-  padding: '20px',
-  backgroundColor: bgColor,
-  borderRadius: '50%',
-  boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
-  border: 'none',
-  color: 'white',
-  cursor: 'pointer',
-  transition: 'background-color 0.2s ease',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  fontSize: '24px',
-});
 
 export default CallScreen;
