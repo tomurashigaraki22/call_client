@@ -159,9 +159,7 @@ const CallScreen = () => {
 
       {/* Hidden Audio Streams */}
       <audio ref={localAudioRef} autoPlay muted style={{ display: 'none' }} />
-      {remoteStream && (
         <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
-      )}
 
       {/* Start Call Button for Authorized Users */}
       {(localPeerId === driverId.slice(0, 4) || localPeerId === userId.slice(0, 4)) && (
