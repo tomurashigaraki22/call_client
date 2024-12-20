@@ -3,7 +3,7 @@ import { FaPhone, FaMicrophone, FaPhoneSlash } from 'react-icons/fa';
 import Peer from 'peerjs';
 
 const CallScreen = () => {
-  const [callStatus, setCallStatus] = useState('Ringing');
+  const [callStatus, setCallStatus] = useState('Calling...');
   const [isMuted, setIsMuted] = useState(false);
   const [timer, setTimer] = useState(0);
   const [intervalId, setIntervalId] = useState(null);
