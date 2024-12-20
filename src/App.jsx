@@ -25,35 +25,36 @@ const CallScreen = () => {
   useEffect(() => {
     const newPeer = new Peer(localPeerId);
     setPeer(newPeer);
-  
+
     newPeer.on('open', (id) => {
       setPeerId(id);
     });
-  
+
     // Automatically accept the call
     newPeer.on('call', async (call) => {
       setCallStatus('Ringing');
       setCallDetails(call);
-  
+
       // Automatically answer the call with the local stream
       navigator.mediaDevices.getUserMedia({ audio: true })
         .then((stream) => {
           localAudioRef.current.srcObject = stream; // Local stream for the caller
           localAudioRef.current.muted = true; // Mute local audio to avoid feedback
-  
+
           call.answer(stream); // Automatically answer the call
+
           call.on('stream', (remoteStream) => {
             setRemoteStream(remoteStream);
             remoteAudioRef.current.srcObject = remoteStream; // Set the remote stream
           });
-  
+
           setCallStatus('In Call');
         })
         .catch((err) => {
           console.error("Error accessing media devices: ", err);
         });
     });
-  
+
     return () => {
       if (newPeer) {
         newPeer.destroy();
@@ -62,10 +63,10 @@ const CallScreen = () => {
   }, []);
 
   useEffect(() => {
-    if (initiator === 'true' && peer) {
-      startCall(remotePeerId);  // Start calling immediately
+    if (initiator === 'true' && peer && remotePeerId) {
+      startCall(remotePeerId);  // Ensure `peer` is initialized before starting the call
     }
-  }, [initiator, peer]);  // Ensure `peer` is initialized before calling
+  }, [initiator, peer, remotePeerId]);  // Add `peer` and `remotePeerId` to dependencies to ensure the call happens when the peer is ready
 
   useEffect(() => {
     if (callStatus === 'In Call') {
@@ -120,25 +121,25 @@ const CallScreen = () => {
       console.error('Peer connection is not initialized yet!');
       return;
     }
-  
+
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then((stream) => {
         localAudioRef.current.srcObject = stream; // Local stream for the caller
         localAudioRef.current.muted = true; // Mute local audio to avoid feedback
-  
+
         const call = peer.call(remotePeerId, stream); // Initiate the call
-  
+
         // Automatically handle incoming stream for the remote party
         call.on('stream', (remoteStream) => {
           console.log("I got a stream: ", remoteStream);
           setRemoteStream(remoteStream);
           remoteAudioRef.current.srcObject = remoteStream; // Set the remote stream
         });
-  
+
         call.on('error', (err) => {
           console.error("Call error: ", err);
         });
-  
+
         setCallStatus('In Call');
       })
       .catch((err) => {
@@ -199,6 +200,7 @@ const CallScreen = () => {
       {/* Hidden Audio Streams */}
       <audio ref={localAudioRef} autoPlay muted style={{ display: 'none' }} />
       <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
+
     </div>
   );
 };
