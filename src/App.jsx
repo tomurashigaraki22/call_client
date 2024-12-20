@@ -82,6 +82,7 @@ const CallScreen = () => {
     if (callDetails) {
       callDetails.answer(localAudioRef.current.srcObject);
       callDetails.on('stream', (stream) => {
+        console.log("Remote stream received: ", stream)
         setRemoteStream(stream);
         remoteAudioRef.current.srcObject = stream;
       });
@@ -95,6 +96,7 @@ const CallScreen = () => {
         localAudioRef.current.srcObject = stream;
         const call = peer.call(remotePeerId, stream);
         call.on('stream', (remoteStream) => {
+          console.log("In start call event: ", remoteStream)
           setRemoteStream(remoteStream);
           remoteAudioRef.current.srcObject = remoteStream;
         });
