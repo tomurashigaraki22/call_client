@@ -64,6 +64,8 @@ const CallScreen = () => {
 
   useEffect(() => {
     if (initiator === 'true'){
+
+      console.log("TRUEE")
       startCall()
     }
   }, [peer])
