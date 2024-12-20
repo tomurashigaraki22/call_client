@@ -106,44 +106,65 @@ const CallScreen = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100vh', backgroundColor: '#1D4ED8', color: 'white', padding: '20px' }}>
-      <div style={{ display: 'flex', flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '20px' }}>{callStatus}</div>
-          {callStatus === 'In Call' && (
-            <div style={{ fontSize: '24px', fontWeight: '600' }}>{formatTime(timer)}</div>
-          )}
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      justifyContent: 'space-between', 
+      height: '100vh', 
+      backgroundColor: '#075E54', 
+      color: 'white', 
+      padding: '20px', 
+      textAlign: 'center',
+      fontFamily: 'Arial, sans-serif' 
+    }}>
+      {/* Header - Call Status */}
+      <div>
+        <div style={{ fontSize: '28px', fontWeight: '600', marginBottom: '20px' }}>
+          {callStatus}
+        </div>
+        {callStatus === 'In Call' && (
+          <div style={{ fontSize: '22px', fontWeight: '500' }}>
+            {formatTime(timer)}
+          </div>
+        )}
+      </div>
+
+      {/* Centered Audio Stream / Caller */}
+      <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+        <div style={{ fontSize: '40px', fontWeight: '700', color: 'white' }}>
+          {remoteStream ? 'Remote Caller' : 'Waiting for Connection'}
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '20px' }}>
+      {/* Call Control Buttons */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '40px', marginBottom: '20px' }}>
         {callStatus === 'Ringing' && (
-          <button onClick={acceptCall} style={{ padding: '16px', backgroundColor: '#10B981', borderRadius: '50%', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
-            <FaPhone size={30} />
+          <button onClick={acceptCall} style={buttonStyles('#10B981')}>
+            <FaPhone size={32} />
           </button>
         )}
         {callStatus === 'In Call' && (
           <>
-            <button onClick={toggleMute} style={{ padding: '16px', backgroundColor: '#F59E0B', borderRadius: '50%', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
-              <FaMicrophone size={30} className={isMuted ? 'opacity-50' : ''} />
+            <button onClick={toggleMute} style={buttonStyles('#F59E0B')}>
+              <FaMicrophone size={32} className={isMuted ? 'opacity-50' : ''} />
             </button>
-            <button onClick={endCall} style={{ padding: '16px', backgroundColor: '#EF4444', borderRadius: '50%', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
-              <FaPhoneSlash size={30} />
+            <button onClick={endCall} style={buttonStyles('#EF4444')}>
+              <FaPhoneSlash size={32} />
             </button>
           </>
         )}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '16px' }}>
-        <audio ref={localAudioRef} autoPlay muted style={{ width: '0', height: '0' }} />
-        {remoteStream && (
-          <audio ref={remoteAudioRef} autoPlay style={{ width: '0', height: '0' }} />
-        )}
-      </div>
+      {/* Hidden Audio Streams */}
+      <audio ref={localAudioRef} autoPlay muted style={{ display: 'none' }} />
+      {remoteStream && (
+        <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
+      )}
 
+      {/* Start Call Button for Authorized Users */}
       {(localPeerId === driverId.slice(0, 4) || localPeerId === userId.slice(0, 4)) && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
-          <button onClick={() => startCall(remotePeerId)} style={{ padding: '16px', backgroundColor: '#3B82F6', borderRadius: '50%', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <button onClick={() => startCall(remotePeerId)} style={buttonStyles('#3B82F6')}>
             Start Call
           </button>
         </div>
@@ -151,5 +172,21 @@ const CallScreen = () => {
     </div>
   );
 };
+
+// Button Styles
+const buttonStyles = (bgColor) => ({
+  padding: '20px',
+  backgroundColor: bgColor,
+  borderRadius: '50%',
+  boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
+  border: 'none',
+  color: 'white',
+  cursor: 'pointer',
+  transition: 'background-color 0.2s ease',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  fontSize: '24px',
+});
 
 export default CallScreen;
