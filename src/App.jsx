@@ -66,7 +66,7 @@ const CallScreen = () => {
     if (initiator === 'true'){
       startCall()
     }
-  }, [initiator])
+  }, [peer])
   
 
   useEffect(() => {
