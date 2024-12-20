@@ -1,264 +1,186 @@
-import React, { useState, useEffect, useRef } from "react";
-import io from "socket.io-client";
-import { FaMicrophone, FaMicrophoneSlash, FaPhoneAlt, FaPhone } from "react-icons/fa";
-import "./App.css";
+import React, { useState, useEffect, useRef } from 'react';
+import { FaPhone, FaMicrophone, FaPhoneSlash } from 'react-icons/fa';
+import Peer from 'peerjs';
 
-function DriverCall() {
-  const [isMuted, setIsMuted] = useState(false);
-  const [callStatus, setCallStatus] = useState("Idle");
-  const [params, setParams] = useState({ driverId: "", userId: "" });
-  const [newSocket, setNewSocket] = useState(null);
-  const [isIncomingCall, setIsIncomingCall] = useState(false);
+const CallScreen = () => {
+  const [callStatus, setCallStatus] = useState('Ringing'); // Call status: 'Ringing' or 'In Call'
+  const [isMuted, setIsMuted] = useState(false); // Mute status
+  const [timer, setTimer] = useState(0); // Timer state in seconds
+  const [intervalId, setIntervalId] = useState(null); // Timer interval ID to clear it when needed
+  const [callDetails, setCallDetails] = useState(null); // To store call details (e.g., peerId)
+  const [peer, setPeer] = useState(null); // PeerJS instance
+  const [peerId, setPeerId] = useState(null); // Local peer ID
+  const [remoteStream, setRemoteStream] = useState(null); // Remote stream for audio
+  const localAudioRef = useRef(null); // For local audio element
+  const remoteAudioRef = useRef(null); // For remote audio element
 
-  const peerConnections = useRef({});
-  const localStream = useRef(null);
-  const remoteAudioRef = useRef(null);
-  const mainArray = useRef(null)
+  const urlParams = new URLSearchParams(window.location.search);
+  const userId = urlParams.get('userId');
+  const driverId = urlParams.get('driverId');
+  
+  // Use first 4 characters of userId and driverId as peerIds
+  const localPeerId = driverId?.slice(0, 4);
+  const remotePeerId = userId?.slice(0, 4);
 
-  const servers = {
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-  };
-
+  // Set up PeerJS and WebRTC connection
   useEffect(() => {
-    const initializeParams = () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      setParams({
-        driverId: urlParams.get("driverId") || "",
-        userId: urlParams.get("userId") || "",
-      });
-    };
+    // Initialize PeerJS instance
+    const newPeer = new Peer(localPeerId);
+    setPeer(newPeer);
 
-    initializeParams();
+    // Generate local peer ID
+    newPeer.on('open', (id) => {
+      setPeerId(id); // Set the local peer ID
+      console.log('My peer ID is: ', id);
+    });
+
+    // Handle incoming call
+    newPeer.on('call', (call) => {
+      console.log('Incoming call...');
+      setCallStatus('Ringing');
+      setCallDetails(call);
+    });
+
+    // Handle peer connection events
+    newPeer.on('connection', (conn) => {
+      console.log('Peer connected: ', conn);
+    });
+
+    // Cleanup on unmount
+    return () => {
+      if (newPeer) {
+        newPeer.destroy();
+      }
+    };
   }, []);
 
+  // Start the timer when call status is 'In Call'
   useEffect(() => {
-    const socket = io("wss://dropserver.onrender.com", {
-      reconnectionAttempts: 5,
-      timeout: 10000,
-    });
-    setNewSocket(socket);
+    if (callStatus === 'In Call') {
+      const id = setInterval(() => {
+        setTimer((prev) => prev + 1); // Increase the timer every second
+      }, 1000);
+      setIntervalId(id);
+    }
 
-    socket.on("connect", () => {
-      console.log("Connected to socket.io successfully");
-      socket.emit("register_user", { email: params.driverId });
-    });
-
-    socket.on("offer", async (data) => {
-      console.log("Received offer:", data);
-      setCallStatus("Incoming Call...");
-      setIsIncomingCall(true);
-      const pc = createPeerConnection(data.from);
-      peerConnections.current[data.from] = pc;
-      try {
-        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-      } catch (error) {
-        console.error("Error setting remote description:", error);
-      }
-    });
-
-    socket.on("answer", async (data) => {
-      console.log("Received answer:", data);
-      if (peerConnections.current[data.from]) {
-        try {
-          await peerConnections.current[data.from].setRemoteDescription(
-            new RTCSessionDescription(data.answer)
-          );
-          try {
-            await remoteAudioRef.current.play();
-            console.log("Audio playback started successfully");
-          } catch (error) {
-            console.error("Error playing audio:", error);
-          }
-        } catch (error) {
-          console.error("Error setting remote description:", error);
-        }
-      }
-    });
-
-    socket.on("ice-candidate", async (data) => {
-      console.log("Received ICE candidate:", data);
-      if (peerConnections.current[data.from]) {
-        try {
-          await peerConnections.current[data.from].addIceCandidate(
-            new RTCIceCandidate(data.candidate)
-          );
-        } catch (error) {
-          console.error("Error adding ICE candidate:", error);
-        }
-      }
-    });
-
+    // Cleanup interval when call ends
     return () => {
-      socket.disconnect();
-    };
-  }, [params]);
-
-  const createPeerConnection = (userId) => {
-    const pc = new RTCPeerConnection(servers);
-
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        newSocket.emit("ice-candidate", {
-          to: userId,
-          from: params.driverId,
-          candidate: event.candidate,
-        });
+      if (intervalId) {
+        clearInterval(intervalId);
       }
     };
+  }, [callStatus]);
 
-    pc.ontrack = (event) => {
-      console.log("Remote track received:", event.streams[0]);
-      if (remoteAudioRef.current && event.streams && event.streams[0]) {
-        remoteAudioRef.current.srcObject = event.streams[0];
-        remoteAudioRef.current.play().catch(error => console.error("Error playing audio:", error));
-      }
-    };
-
-    return pc;
+  // Format the timer into minutes:seconds format
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${minutes}:${sec < 10 ? '0' : ''}${sec}`;
   };
 
-  const startCall = async () => {
-    try {
-      setCallStatus("Starting Call...");
-      const pc = createPeerConnection(params.userId);
-      peerConnections.current[params.userId] = pc;
-
-      localStream.current = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-      });
-
-      localStream.current.getTracks().forEach((track) => {
-        pc.addTrack(track, localStream.current);
-      });
-
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      console.log("Local description set:", pc.localDescription);
-
-      newSocket.emit("offer", {
-        to: params.userId,
-        from: params.driverId,
-        offer,
-      });
-    } catch (error) {
-      console.error("Error starting call:", error);
-      alert("Error occurred: " + error);
-    }
-  };
-
-  const acceptCall = async () => {
-    try {
-      setCallStatus("Call Accepted");
-      const callerId = Object.keys(peerConnections.current)[0]; // Get the caller's ID
-      const pc = peerConnections.current[callerId];
-
-      if (!pc) {
-        throw new Error("No peer connection found for the incoming call");
-      }
-
-      localStream.current = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-      });
-
-      localStream.current.getTracks().forEach((track) => {
-        pc.addTrack(track, localStream.current);
-      });
-
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-
-      newSocket.emit("answer", { 
-        to: callerId, 
-        from: params.driverId,
-        answer 
-      });
-      setIsIncomingCall(false);
-
-      // Start playing the audio
-      if (remoteAudioRef.current && remoteAudioRef.current.srcObject) {
-        try {
-          await remoteAudioRef.current.play();
-          console.log("Remote audio playback started");
-        } catch (error) {
-          console.error("Error playing remote audio:", error);
-        }
-      }
-
-    } catch (error) {
-      console.error("Error accepting call:", error);
-      alert(`Failed to accept call. Error: ${error.message}`);
-    }
-  };
-
-  const endCall = () => {
-    Object.values(peerConnections.current).forEach((pc) => pc.close());
-    peerConnections.current = {};
-    if (localStream.current) {
-      localStream.current.getTracks().forEach((track) => track.stop());
-    }
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.srcObject = null;
-    }
-    setCallStatus("Call Ended");
-  };
-
+  // Handle mute button click
   const toggleMute = () => {
-    if (localStream.current) {
-      const audioTrack = localStream.current.getAudioTracks()[0];
-      audioTrack.enabled = !audioTrack.enabled;
-      setIsMuted(!audioTrack.enabled);
+    setIsMuted((prev) => !prev);
+    if (localAudioRef.current && localAudioRef.current.srcObject) {
+      localAudioRef.current.srcObject.getAudioTracks().forEach((track) => {
+        track.enabled = !track.enabled;
+      });
     }
   };
 
-  const playAudio = () => {
-    if (remoteAudioRef.current && remoteAudioRef.current.srcObject) {
-      remoteAudioRef.current.play().catch(error => console.error("Error playing audio:", error));
-    } else {
-      console.log("No audio source available yet");
-      alert("No audio source available")
+  // Handle end call button click
+  const endCall = () => {
+    setCallStatus('Ended');
+    if (peer && callDetails) {
+      callDetails.close(); // Close the call
     }
+    clearInterval(intervalId); // Clear the timer
+  };
+
+  // Handle accept call button click
+  const acceptCall = () => {
+    if (callDetails) {
+      const { peer: callerId } = callDetails;
+      callDetails.answer(localAudioRef.current.srcObject); // Answer the incoming call with local audio
+
+      // Set up remote stream
+      callDetails.on('stream', (stream) => {
+        setRemoteStream(stream); // Set the remote audio stream
+        remoteAudioRef.current.srcObject = stream;
+      });
+
+      setCallStatus('In Call');
+    }
+  };
+
+  // Start the call when initiating a call (e.g., dial button press)
+  const startCall = (remotePeerId) => {
+    navigator.mediaDevices.getUserMedia({ audio: true }) // Only audio
+      .then((stream) => {
+        // Set local audio stream
+        localAudioRef.current.srcObject = stream;
+
+        // Make the call
+        const call = peer.call(remotePeerId, stream);
+        call.on('stream', (remoteStream) => {
+          setRemoteStream(remoteStream); // Set the remote audio stream
+          remoteAudioRef.current.srcObject = remoteStream;
+        });
+
+        setCallStatus('In Call');
+      })
+      .catch((err) => {
+        alert(`Error accessing media: ${err}`)
+
+        console.error('Error accessing media devices: ', err);
+      });
   };
 
   return (
-    <div className="call-screen">
-      <div className="caller-info">
-        <div className="caller-name">Driver</div>
-        <div className="call-status">{callStatus}</div>
-      </div>
-
-      <div>
-        <audio ref={remoteAudioRef} playsInline />
-        <button onClick={playAudio} className="play-audio-button">
-          Play Audio
-        </button>
-      </div>
-
-      <div className="call-controls">
-        <button onClick={toggleMute} className="control-button">
-          {isMuted ? (
-            <FaMicrophoneSlash className="control-icon red" />
-          ) : (
-            <FaMicrophone className="control-icon white" />
+    <div className="flex flex-col justify-between h-screen bg-blue-600 text-white p-4">
+      <div className="flex flex-1 justify-center items-center">
+        <div className="text-center">
+          <div className="text-4xl font-bold mb-4">{callStatus}</div>
+          {callStatus === 'In Call' && (
+            <div className="text-2xl font-semibold">{formatTime(timer)}</div>
           )}
-        </button>
+        </div>
+      </div>
 
-        {isIncomingCall ? (
-          <button onClick={acceptCall} className="control-button green-bg">
-            <FaPhone className="control-icon white" />
-          </button>
-        ) : (
-          <button onClick={startCall} className="control-button green-bg">
-            <FaPhoneAlt className="control-icon white" />
+      <div className="flex justify-center space-x-8 mb-4">
+        {callStatus === 'Ringing' && (
+          <button onClick={acceptCall} className="p-4 bg-green-600 rounded-full shadow-lg">
+            <FaPhone size={30} />
           </button>
         )}
-
-        <button onClick={endCall} className="control-button red-bg">
-          <FaPhoneAlt className="control-icon white rotate-icon" />
-        </button>
+        {callStatus === 'In Call' && (
+          <>
+            <button onClick={toggleMute} className="p-4 bg-yellow-600 rounded-full shadow-lg">
+              <FaMicrophone size={30} className={isMuted ? 'opacity-50' : ''} />
+            </button>
+            <button onClick={endCall} className="p-4 bg-red-600 rounded-full shadow-lg">
+              <FaPhoneSlash size={30} />
+            </button>
+          </>
+        )}
       </div>
+
+      <div className="flex justify-center space-x-4">
+        <audio ref={localAudioRef} autoPlay muted className="w-0 h-0" />
+        {remoteStream && (
+          <audio ref={remoteAudioRef} autoPlay className="w-0 h-0" />
+        )}
+      </div>
+
+      {localPeerId === driverId.slice(0, 4)  && (
+        <div className="flex justify-center mt-4">
+          <button onClick={() => startCall(remotePeerId)} className="p-4 bg-blue-500 rounded-full shadow-lg">
+            Start Call
+          </button>
+        </div>
+      )}
     </div>
   );
-}
+};
 
-export default DriverCall;
-
+export default CallScreen;
