@@ -3,7 +3,7 @@ import { FaPhone, FaMicrophone, FaPhoneSlash } from 'react-icons/fa';
 import Peer from 'peerjs';
 
 const CallScreen = () => {
-  const [callStatus, setCallStatus] = useState('Calling...');
+  const [callStatus, setCallStatus] = useState('Connecting...');
   const [isMuted, setIsMuted] = useState(false);
   const [timer, setTimer] = useState(0);
   const [intervalId, setIntervalId] = useState(null);
@@ -17,6 +17,7 @@ const CallScreen = () => {
   const urlParams = new URLSearchParams(window.location.search);
   const userId = urlParams.get('userId');
   const driverId = urlParams.get('driverId');
+  const initiator = urlParams.get('initiator');
   
   const localPeerId = driverId?.slice(0, 4);
   const remotePeerId = userId?.slice(0, 4);
@@ -60,6 +61,12 @@ const CallScreen = () => {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (initiator === 'true'){
+      startCall()
+    }
+  }, [initiator])
   
 
   useEffect(() => {
