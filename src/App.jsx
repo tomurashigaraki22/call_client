@@ -93,26 +93,31 @@ const CallScreen = () => {
   const startCall = (remotePeerId) => {
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then((stream) => {
+        // Set the local stream to be played but muted for the caller
         localAudioRef.current.srcObject = stream;
+        localAudioRef.current.muted = true; // Ensure local audio is muted to prevent feedback
+  
         const call = peer.call(remotePeerId, stream);
-
-        // Ensure that the remote stream is received as soon as the call starts.
+  
+        // Handle receiving the remote stream
         call.on('stream', (remoteStream) => {
           console.log("I got a stream: ", remoteStream);
           setRemoteStream(remoteStream);
           remoteAudioRef.current.srcObject = remoteStream;
         });
-
+  
+        // Handle errors in the call
         call.on('error', (err) => {
           console.error("Call error: ", err);
         });
-
+  
         setCallStatus('In Call');
       })
       .catch((err) => {
         alert(`Error accessing media: ${err}`);
       });
   };
+  
 
   return (
     <div style={{ 
