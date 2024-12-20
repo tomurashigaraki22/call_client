@@ -57,27 +57,29 @@ const CallScreen = () => {
     };
   }, []);
 
-  const checkAndConnectToPeer = () => {
-    if (!targetPeerId) return;
   
-    const conn = peer.connect(targetPeerId);
-    conn.on('open', () => {
-      console.log('Connection established with:', targetPeerId);
-      setCallStatus('Peer Connected');
-      startCall(targetPeerId);
-  
-      // Clear the interval since the connection is established
-      clearInterval(intervalId);
-    });
-  
-    conn.on('error', (err) => {
-      console.error('Connection failed, retrying...', err);
-    });
-  };
   
 
   useEffect(() => {
     let intervalId;
+
+    const checkAndConnectToPeer = () => {
+      if (!targetPeerId) return;
+    
+      const conn = peer.connect(targetPeerId);
+      conn.on('open', () => {
+        console.log('Connection established with:', targetPeerId);
+        setCallStatus('Peer Connected');
+        startCall(targetPeerId);
+    
+        // Clear the interval since the connection is established
+        clearInterval(intervalId);
+      });
+    
+      conn.on('error', (err) => {
+        console.error('Connection failed, retrying...', err);
+      });
+    };
   
     if (isInitiator && peer) {
       intervalId = setInterval(() => {
