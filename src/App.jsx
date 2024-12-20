@@ -42,7 +42,6 @@ const CallScreen = () => {
           localAudioRef.current.muted = true; // Mute local audio to avoid feedback
   
           call.answer(stream); // Automatically answer the call
-  
           call.on('stream', (remoteStream) => {
             setRemoteStream(remoteStream);
             remoteAudioRef.current.srcObject = remoteStream; // Set the remote stream
@@ -64,11 +63,9 @@ const CallScreen = () => {
 
   useEffect(() => {
     if (initiator === 'true' && peer) {
-      startCall(remotePeerId);  // Ensure `peer` is initialized before starting the call
+      startCall(remotePeerId);  // Start calling immediately
     }
-  }, [initiator, peer]);  // Add `peer` to dependencies to ensure the call happens when the peer is ready
-  
-  
+  }, [initiator, peer]);  // Ensure `peer` is initialized before calling
 
   useEffect(() => {
     if (callStatus === 'In Call') {
@@ -148,9 +145,6 @@ const CallScreen = () => {
         alert(`Error accessing media: ${err}`);
       });
   };
-  
-  
-  
 
   return (
     <div style={{ 
@@ -205,15 +199,6 @@ const CallScreen = () => {
       {/* Hidden Audio Streams */}
       <audio ref={localAudioRef} autoPlay muted style={{ display: 'none' }} />
       <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
-
-      {/* Start Call Button for Authorized Users */}
-      {(localPeerId === driverId.slice(0, 4) || localPeerId === userId.slice(0, 4)) && (
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <button onClick={() => startCall(remotePeerId)} style={buttonStyles('#3B82F6')}>
-            Start Call
-          </button>
-        </div>
-      )}
     </div>
   );
 };
