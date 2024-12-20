@@ -74,10 +74,20 @@ const CallScreen = () => {
   };
 
   useEffect(() => {
+    let intervalId;
+  
     if (isInitiator && peer) {
-      checkAndConnectToPeer();
+      intervalId = setInterval(() => {
+        checkAndConnectToPeer();
+      }, 2000); // Check every 2 seconds
     }
+  
+    return () => {
+      // Cleanup interval on component unmount or if dependencies change
+      clearInterval(intervalId);
+    };
   }, [isInitiator, peer]);
+  
 
   const startCall = (remotePeerId) => {
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
