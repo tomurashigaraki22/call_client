@@ -24,23 +24,43 @@ const CallScreen = () => {
   useEffect(() => {
     const newPeer = new Peer(localPeerId);
     setPeer(newPeer);
-
+  
     newPeer.on('open', (id) => {
       setPeerId(id);
     });
-
+  
+    // Automatically accept the call
     newPeer.on('call', async (call) => {
       setCallStatus('Ringing');
       setCallDetails(call);
-      
+  
+      // Automatically answer the call with the local stream
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then((stream) => {
+          localAudioRef.current.srcObject = stream; // Local stream for the caller
+          localAudioRef.current.muted = true; // Mute local audio to avoid feedback
+  
+          call.answer(stream); // Automatically answer the call
+  
+          call.on('stream', (remoteStream) => {
+            setRemoteStream(remoteStream);
+            remoteAudioRef.current.srcObject = remoteStream; // Set the remote stream
+          });
+  
+          setCallStatus('In Call');
+        })
+        .catch((err) => {
+          console.error("Error accessing media devices: ", err);
+        });
     });
-
+  
     return () => {
       if (newPeer) {
         newPeer.destroy();
       }
     };
   }, []);
+  
 
   useEffect(() => {
     if (callStatus === 'In Call') {
@@ -93,20 +113,18 @@ const CallScreen = () => {
   const startCall = (remotePeerId) => {
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then((stream) => {
-        // Set the local stream to be played but muted for the caller
-        localAudioRef.current.srcObject = stream;
-        localAudioRef.current.muted = true; // Ensure local audio is muted to prevent feedback
+        localAudioRef.current.srcObject = stream; // Local stream for the caller
+        localAudioRef.current.muted = true; // Mute local audio to avoid feedback
   
-        const call = peer.call(remotePeerId, stream);
+        const call = peer.call(remotePeerId, stream); // Initiate the call
   
-        // Handle receiving the remote stream
+        // Automatically handle incoming stream for the remote party
         call.on('stream', (remoteStream) => {
           console.log("I got a stream: ", remoteStream);
           setRemoteStream(remoteStream);
-          remoteAudioRef.current.srcObject = remoteStream;
+          remoteAudioRef.current.srcObject = remoteStream; // Set the remote stream
         });
   
-        // Handle errors in the call
         call.on('error', (err) => {
           console.error("Call error: ", err);
         });
@@ -117,6 +135,7 @@ const CallScreen = () => {
         alert(`Error accessing media: ${err}`);
       });
   };
+  
   
 
   return (
