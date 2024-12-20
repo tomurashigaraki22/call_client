@@ -63,12 +63,11 @@ const CallScreen = () => {
   }, []);
 
   useEffect(() => {
-    if (initiator === 'true'){
-
-      console.log("TRUEE")
-      startCall()
+    if (initiator === 'true' && peer) {
+      startCall(remotePeerId);  // Ensure `peer` is initialized before starting the call
     }
-  }, [peer])
+  }, [initiator, peer]);  // Add `peer` to dependencies to ensure the call happens when the peer is ready
+  
   
 
   useEffect(() => {
