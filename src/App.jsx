@@ -48,9 +48,7 @@ const CallScreen = () => {
     newPeer.on("connection", (conn) => {
       conn.on("open", () => {
         console.log("Connected to peer:", conn.peer);
-        if (isInitiator) {
-          startCall(conn.peer);
-        }
+        startCall(conn.peer);
       });
     });
 
