@@ -96,6 +96,7 @@ const CallScreen = () => {
       console.error("Cannot start call, remotePeerId is undefined.");
       return;
     }
+    console.log("problem is starting: ", remotePeerId)
   
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
       localAudioRef.current.srcObject = stream;
