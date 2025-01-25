@@ -106,8 +106,10 @@ const CallScreen = () => {
         return;
       }
   
+      console.log("outgoing: ", call)
       setCall(outgoingCall);
       outgoingCall.on("stream", (remoteStream) => {
+        console.log("Stream: ", remoteStream)
         remoteAudioRef.current.srcObject = remoteStream;
         setCallStatus("In Call");
       });
