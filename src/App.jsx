@@ -21,6 +21,28 @@ const CallScreen = () => {
   const localPeerId = userId;
   const targetPeerId = driverId;
 
+  const startCall = (remotePeerId) => {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      localAudioRef.current.srcObject = stream;
+      const outgoingCall = peer.call(remotePeerId, stream);
+      setCall(outgoingCall);
+
+      outgoingCall.on('stream', (remoteStream) => {
+        remoteAudioRef.current.srcObject = remoteStream;
+        setCallStatus('In Call');
+      });
+
+      setCallStatus('Calling...');
+    });
+  };
+
+  const endCall = () => {
+    if (call) {
+      call.close();
+      setCallStatus('Call Ended');
+    }
+  };
+
   useEffect(() => {
     const newPeer = new Peer(localPeerId); // Use a predefined Peer ID
     setPeer(newPeer);
@@ -95,27 +117,7 @@ const CallScreen = () => {
   }, [isInitiator, peer]);
   
 
-  const startCall = (remotePeerId) => {
-    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-      localAudioRef.current.srcObject = stream;
-      const outgoingCall = peer.call(remotePeerId, stream);
-      setCall(outgoingCall);
-
-      outgoingCall.on('stream', (remoteStream) => {
-        remoteAudioRef.current.srcObject = remoteStream;
-        setCallStatus('In Call');
-      });
-
-      setCallStatus('Calling...');
-    });
-  };
-
-  const endCall = () => {
-    if (call) {
-      call.close();
-      setCallStatus('Call Ended');
-    }
-  };
+  
 
   const toggleMute = () => {
     if (localAudioRef.current) {
