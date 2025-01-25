@@ -107,7 +107,7 @@ const CallScreen = () => {
         return;
       }
   
-      console.log("outgoing: ", call)
+      console.log("outgoing: ", outgoingCall)
       setCall(outgoingCall);
       outgoingCall.on("stream", (remoteStream) => {
         console.log("Stream: ", remoteStream)
