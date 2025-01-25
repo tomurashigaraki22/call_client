@@ -31,6 +31,7 @@ const CallScreen = () => {
     });
 
     newPeer.on("call", (incomingCall) => {
+      console.log("I'm being called")
       setCallStatus("Ringing...");
       navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
         localAudioRef.current.srcObject = stream;
@@ -48,7 +49,9 @@ const CallScreen = () => {
     newPeer.on("connection", (conn) => {
       conn.on("open", () => {
         console.log("Connected to peer:", conn.peer);
-        startCall(conn.peer);
+        if (isInitiator){
+          startCall(conn.peer);
+        }
       });
     });
 
@@ -89,20 +92,34 @@ const CallScreen = () => {
   }, [isInitiator, peer]);
 
   const startCall = (remotePeerId) => {
+    if (!remotePeerId) {
+      console.error("Cannot start call, remotePeerId is undefined.");
+      return;
+    }
+  
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
       localAudioRef.current.srcObject = stream;
       const outgoingCall = peer.call(remotePeerId, stream);
+  
+      if (!outgoingCall) {
+        console.error("Outgoing call failed.");
+        return;
+      }
+  
       setCall(outgoingCall);
-
       outgoingCall.on("stream", (remoteStream) => {
         remoteAudioRef.current.srcObject = remoteStream;
         setCallStatus("In Call");
       });
-
+  
       setCallStatus("Calling...");
-    });
+    }).catch((err) => console.error("Failed to access audio stream:", err));
   };
-
+  
+  useEffect(() => {
+    console.log("Target Peer ID:", targetPeerId);
+  }, [targetPeerId]);
+  
   const endCall = () => {
     if (call) {
       call.close();
